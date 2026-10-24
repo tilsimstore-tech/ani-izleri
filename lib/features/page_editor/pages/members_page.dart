@@ -6,7 +6,7 @@ import '../../../widgets/empty_state.dart';
 import '../../../widgets/round_photo.dart';
 
 const _kRelations = [
-  'Anneanne', 'Babaanne', 'Dede', 'Hala', 'Teyze',
+  'Anneanne', 'Babaanne', 'Dede (Anne)', 'Dede (Baba)', 'Hala', 'Teyze',
   'Amca', 'Dayı', 'Kardeş', 'Kuzen',
 ];
 

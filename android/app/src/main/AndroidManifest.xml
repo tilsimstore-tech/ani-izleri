@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
-        android:label="ani_izleri"
+        android:label="Bebeğimin Anı İzleri"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

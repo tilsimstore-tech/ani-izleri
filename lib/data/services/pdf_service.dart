@@ -9,6 +9,12 @@ class PdfService {
   static PdfColor _c(Color c) =>
       PdfColor(c.red / 255, c.green / 255, c.blue / 255);
 
+  static PdfColor _mix(PdfColor a, PdfColor b, double t) => PdfColor(
+        a.red + (b.red - a.red) * t,
+        a.green + (b.green - a.green) * t,
+        a.blue + (b.blue - a.blue) * t,
+      );
+
   static Future<String?> generateAlbum({
     required String babyName,
     required String? avatarPath,
@@ -17,17 +23,19 @@ class PdfService {
     required Color inkColor,
     required Color goldColor,
     required Color accentColor,
+    Color? panelColor,
+    Color? lineColor,
   }) async {
     final pdf = pw.Document();
 
-    final cormorantBoldItalic =
-        await PdfGoogleFonts.cormorantGaramondBoldItalic();
-    final cormorantItalic =
-        await PdfGoogleFonts.cormorantGaramondItalic();
-    final cormorantBold =
-        await PdfGoogleFonts.cormorantGaramondBold();
-    final jost = await PdfGoogleFonts.jostLight();
-    final jostMedium = await PdfGoogleFonts.jostMedium();
+    // Tipografi: Cormorant Garamond (seri/duygusal başlıklar ve metin) +
+    // Jost (ince büyük harf etiketler, künye) — hiyerarşiye göre ağırlıklandırılmış.
+    final scriptItalic = await PdfGoogleFonts.cormorantGaramondItalic();
+    final headingBold = await PdfGoogleFonts.cormorantGaramondSemiBold();
+    final bodyRegular = await PdfGoogleFonts.cormorantGaramondRegular();
+    final bodyMedium = await PdfGoogleFonts.cormorantGaramondMedium();
+    final labelSans = await PdfGoogleFonts.jostRegular();
+    final labelSansMedium = await PdfGoogleFonts.jostMedium();
 
     final bg = _c(bgColor);
     final ink = _c(inkColor);
@@ -38,6 +46,16 @@ class PdfService {
       inkColor.green / 255 * 0.5 + bgColor.green / 255 * 0.5,
       inkColor.blue / 255 * 0.5 + bgColor.blue / 255 * 0.5,
     );
+    // Kapak avatarının arka planı için sakin bir zemin tonu.
+    final mat = panelColor != null ? _c(panelColor) : _mix(bg, ink, 0.045);
+    // İnce ayraç çizgileri (kicker altı, mektup çizgisi, dipnot çizgisi).
+    final line = lineColor != null ? _c(lineColor) : _mix(bg, ink, 0.16);
+    // Fotoğraf alt yazıları için temaya hafifçe göz kırpan ton.
+    final caption = _mix(soft, accent, 0.35);
+    // İçerik sayfalarının kenar boşluğu ve kullanılabilir genişliği —
+    // fotoğrafları kırpmadan "justified" (ortak yükseklikte) dizmek için.
+    const contentMarginH = 60.0;
+    final contentWidth = PdfPageFormat.a4.width - contentMarginH * 2;
 
     // ════════════════════════════════════════════════════
     // KAPAK
@@ -47,7 +65,13 @@ class PdfService {
       build: (ctx) => pw.Container(
         color: bg,
         child: pw.Stack(children: [
-          _thinBorder(gold),
+          // Masthead çizgileri — kutu çerçeve yok, sade üst/alt hat.
+          pw.Positioned(
+              top: 48, left: 56, right: 56,
+              child: pw.Container(height: 0.6, color: line)),
+          pw.Positioned(
+              bottom: 48, left: 56, right: 56,
+              child: pw.Container(height: 0.6, color: line)),
           pw.Center(
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,
@@ -55,10 +79,17 @@ class PdfService {
                 if (avatarPath != null &&
                     File(avatarPath).existsSync()) ...[
                   pw.Container(
-                    width: 110, height: 110,
+                    width: 116, height: 116,
                     decoration: pw.BoxDecoration(
                       shape: pw.BoxShape.circle,
-                      border: pw.Border.all(color: gold, width: 1.8),
+                      color: mat,
+                      boxShadow: [
+                        pw.BoxShadow(
+                          color: PdfColor(0, 0, 0, 0.14),
+                          offset: const PdfPoint(0, 4),
+                          blurRadius: 12,
+                        ),
+                      ],
                     ),
                     child: pw.ClipOval(
                       child: pw.Image(
@@ -68,38 +99,32 @@ class PdfService {
                       ),
                     ),
                   ),
-                  pw.SizedBox(height: 28),
+                  pw.SizedBox(height: 32),
                 ] else
-                  pw.SizedBox(height: 50),
-                pw.Text('Bebeğimin',
+                  pw.SizedBox(height: 58),
+                pw.Text('BEBEĞİMİN',
                     style: pw.TextStyle(
-                        font: cormorantItalic,
-                        fontSize: 22, color: gold)),
-                pw.SizedBox(height: 2),
+                        font: labelSansMedium,
+                        fontSize: 11, color: gold,
+                        letterSpacing: 4)),
+                pw.SizedBox(height: 10),
                 pw.Text(babyName,
                     style: pw.TextStyle(
-                        font: cormorantBoldItalic,
-                        fontSize: 58, color: ink)),
-                pw.Text('Anı İzleri',
+                        font: headingBold,
+                        fontSize: 62, color: ink,
+                        letterSpacing: 0.2)),
+                pw.SizedBox(height: 8),
+                pw.Text('A n ı   İ z l e r i',
                     style: pw.TextStyle(
-                        font: cormorantItalic,
-                        fontSize: 28, color: gold)),
-                pw.SizedBox(height: 32),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
-                  children: [
-                    pw.Container(width: 55, height: 0.6, color: gold),
-                    pw.SizedBox(width: 12),
-                    _footDots(gold),
-                    pw.SizedBox(width: 12),
-                    pw.Container(width: 55, height: 0.6, color: gold),
-                  ],
-                ),
-                pw.SizedBox(height: 32),
+                        font: scriptItalic,
+                        fontSize: 20, color: gold)),
+                pw.SizedBox(height: 40),
+                _footDots(gold),
+                pw.SizedBox(height: 36),
                 pw.Text('T  I  L  S  I  M',
                     style: pw.TextStyle(
-                        font: jostMedium, fontSize: 10,
-                        letterSpacing: 5, color: soft)),
+                        font: labelSansMedium, fontSize: 10,
+                        letterSpacing: 6, color: soft)),
               ],
             ),
           ),
@@ -112,7 +137,18 @@ class PdfService {
     // ════════════════════════════════════════════════════
     final sections = _buildSections(entries);
 
+    // Toplam içerik sayfası sayısını önceden hesapla (dipnot numaralandırması için)
+    int totalContentPages = 0;
     for (final section in sections) {
+      for (final page in section.pages) {
+        final n = _chunk(page.photos, 4).length;
+        totalContentPages += n == 0 ? 1 : n;
+      }
+    }
+    int pageCounter = 0;
+
+    for (int si = 0; si < sections.length; si++) {
+      final section = sections[si];
       // Ayraç
       pdf.addPage(pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -120,39 +156,46 @@ class PdfService {
           color: section.color,
           child: pw.Stack(children: [
             pw.Positioned(
-              left: 38, top: 38, bottom: 38,
-              child: pw.Container(
-                  width: 0.6,
-                  color: PdfColor(1, 1, 1, 0.35)),
+              left: 56, top: 50,
+              child: pw.Text(
+                  (si + 1).toString().padLeft(2, '0'),
+                  style: pw.TextStyle(
+                      font: labelSans, fontSize: 10,
+                      letterSpacing: 3,
+                      color: PdfColor(1, 1, 1, 0.5))),
+            ),
+            pw.Positioned(
+              right: 56, top: 50,
+              child: pw.Text(
+                  (si + 1).toString().padLeft(2, '0') +
+                      ' / ' +
+                      sections.length.toString().padLeft(2, '0'),
+                  style: pw.TextStyle(
+                      font: labelSans, fontSize: 10,
+                      letterSpacing: 1.5,
+                      color: PdfColor(1, 1, 1, 0.5))),
             ),
             pw.Center(
               child: pw.Column(
                 mainAxisAlignment: pw.MainAxisAlignment.center,
                 children: [
-                  pw.Text(section.titleScript,
-                      style: pw.TextStyle(
-                          font: cormorantItalic,
-                          fontSize: 38,
-                          color: PdfColors.white)),
                   pw.Text(section.titleBold.toUpperCase(),
                       style: pw.TextStyle(
-                          font: jostMedium, fontSize: 17,
-                          letterSpacing: 5,
+                          font: labelSansMedium, fontSize: 13,
+                          letterSpacing: 6,
+                          color: PdfColor(1, 1, 1, 0.75))),
+                  pw.SizedBox(height: 14),
+                  pw.Text(section.titleScript,
+                      style: pw.TextStyle(
+                          font: headingBold,
+                          fontSize: 50,
                           color: PdfColors.white)),
-                  pw.SizedBox(height: 22),
+                  pw.SizedBox(height: 26),
                   pw.Container(
-                      width: 40, height: 0.6,
-                      color: PdfColor(1, 1, 1, 0.7)),
+                      width: 34, height: 0.6,
+                      color: PdfColor(1, 1, 1, 0.6)),
                 ],
               ),
-            ),
-            pw.Positioned(
-              bottom: 30, right: 36,
-              child: pw.Text('T I L S I M',
-                  style: pw.TextStyle(
-                      font: jost, fontSize: 8,
-                      letterSpacing: 4,
-                      color: PdfColor(1, 1, 1, 0.5))),
             ),
           ]),
         ),
@@ -169,32 +212,64 @@ class PdfService {
           final chunkPhotos =
               photoChunks.isEmpty ? <String>[] : photoChunks[ci];
           final isFirst = ci == 0;
+          pageCounter++;
+
+          // Sayfada foto dışında içerik yoksa, foto bloğu kalan dikey
+          // alanda ortalanır (üstte yığılıp altta boş kalmasın diye).
+          final isTallPage = page.fields.isEmpty &&
+              (page.text?.isEmpty ?? true) &&
+              page.letter == null;
+          final photosWidget = chunkPhotos.isEmpty
+              ? null
+              : _photos(
+                  photos: chunkPhotos,
+                  labels: page.photoLabels.isEmpty
+                      ? null
+                      : page.photoLabels,
+                  captionFont: scriptItalic,
+                  captionColor: caption,
+                  bg: bg,
+                  availableWidth: contentWidth,
+                  tall: isTallPage,
+                );
+          pw.Widget middle;
+          if (photosWidget == null) {
+            middle = pw.SizedBox();
+          } else if (isTallPage) {
+            middle = pw.Expanded(child: pw.Center(child: photosWidget));
+          } else {
+            middle = photosWidget;
+          }
 
           pdf.addPage(pw.Page(
             pageFormat: PdfPageFormat.a4,
-            margin: const pw.EdgeInsets.fromLTRB(52, 44, 52, 44),
+            margin: const pw.EdgeInsets.fromLTRB(
+                contentMarginH, 54, contentMarginH, 46),
             build: (ctx) => pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 // Başlık
                 if (isFirst) ...[
                   _header(
+                    kicker: '${section.titleScript} ${section.titleBold}',
                     title: page.title,
                     date: page.date,
-                    sectionColor: section.color,
-                    boldItalic: cormorantBoldItalic,
-                    italic: cormorantItalic,
+                    kickerFont: labelSans,
+                    titleFont: headingBold,
+                    dateFont: scriptItalic,
                     ink: ink,
                     gold: gold,
+                    soft: soft,
+                    line: line,
                   ),
-                  pw.SizedBox(height: 18),
+                  pw.SizedBox(height: 24),
                 ],
 
                 // Alanlar
                 if (isFirst && page.fields.isNotEmpty) ...[
-                  _fields(page.fields, jostMedium,
-                      cormorantItalic, ink, soft),
-                  pw.SizedBox(height: 12),
+                  _fields(page.fields, labelSans,
+                      bodyMedium, ink, soft, line),
+                  pw.SizedBox(height: 16),
                 ],
 
                 // Metin
@@ -203,11 +278,11 @@ class PdfService {
                     page.text!.isNotEmpty) ...[
                   pw.Text(page.text!,
                       style: pw.TextStyle(
-                          font: cormorantItalic,
-                          fontSize: 16,
+                          font: bodyRegular,
+                          fontSize: 15.5,
                           color: ink,
-                          lineSpacing: 5)),
-                  pw.SizedBox(height: 12),
+                          lineSpacing: 6)),
+                  pw.SizedBox(height: 16),
                 ],
 
                 // Mektup
@@ -217,31 +292,25 @@ class PdfService {
                   _letter(
                     text: page.letter!,
                     from: page.letterFrom,
-                    italic: cormorantItalic,
-                    ink: ink, soft: soft, gold: gold,
-                    accent: accent,
+                    bodyFont: bodyRegular,
+                    accentFont: scriptItalic,
+                    labelFont: labelSans,
+                    ink: ink, soft: soft, gold: gold, line: line,
                   ),
-                  pw.SizedBox(height: 12),
+                  pw.SizedBox(height: 16),
                 ],
 
                 // Fotoğraflar
-                if (chunkPhotos.isNotEmpty) ...[
-                  _photos(
-                    photos: chunkPhotos,
-                    labels: page.photoLabels.isEmpty
-                        ? null
-                        : page.photoLabels,
-                    accent: accent, bg: bg,
-                    labelFont: cormorantItalic,
-                    soft: soft,
-                    tall: page.fields.isEmpty &&
-                        (page.text?.isEmpty ?? true) &&
-                        page.letter == null,
-                  ),
-                ],
+                middle,
 
-                pw.Spacer(),
-                _footer(jost, gold, section.color),
+                if (!isTallPage) pw.Spacer(),
+                _footer(
+                  font: labelSans,
+                  line: line,
+                  soft: soft,
+                  pageNo: pageCounter,
+                  totalPages: totalContentPages,
+                ),
               ],
             ),
           ));
@@ -257,29 +326,34 @@ class PdfService {
       build: (ctx) => pw.Container(
         color: bg,
         child: pw.Stack(children: [
-          _thinBorder(gold),
+          pw.Positioned(
+              top: 48, left: 56, right: 56,
+              child: pw.Container(height: 0.6, color: line)),
+          pw.Positioned(
+              bottom: 48, left: 56, right: 56,
+              child: pw.Container(height: 0.6, color: line)),
           pw.Center(
             child: pw.Column(
               mainAxisAlignment: pw.MainAxisAlignment.center,
               children: [
                 _footDots(gold),
-                pw.SizedBox(height: 24),
+                pw.SizedBox(height: 30),
                 pw.Text('Her anın bir izi vardır,',
                     style: pw.TextStyle(
-                        font: cormorantItalic,
-                        fontSize: 21, color: ink)),
+                        font: bodyRegular,
+                        fontSize: 20, color: ink)),
                 pw.Text('bu defter senin izlerinle dolu.',
                     style: pw.TextStyle(
-                        font: cormorantItalic,
-                        fontSize: 21, color: ink)),
-                pw.SizedBox(height: 30),
+                        font: bodyRegular,
+                        fontSize: 20, color: ink)),
+                pw.SizedBox(height: 34),
                 pw.Container(
-                    width: 50, height: 0.6, color: gold),
-                pw.SizedBox(height: 18),
+                    width: 32, height: 0.6, color: gold),
+                pw.SizedBox(height: 20),
                 pw.Text('T  I  L  S  I  M',
                     style: pw.TextStyle(
-                        font: jostMedium, fontSize: 11,
-                        letterSpacing: 5, color: gold)),
+                        font: labelSansMedium, fontSize: 10,
+                        letterSpacing: 6, color: soft)),
               ],
             ),
           ),
@@ -298,16 +372,6 @@ class PdfService {
   }
 
   // ── Bileşenler ─────────────────────────────────────────
-
-  static pw.Widget _thinBorder(PdfColor gold) {
-    return pw.Positioned(
-      top: 22, left: 22, right: 22, bottom: 22,
-      child: pw.Container(
-        decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: gold, width: 0.6)),
-      ),
-    );
-  }
 
   static pw.Widget _footDots(PdfColor color) {
     return pw.Row(
@@ -335,20 +399,28 @@ class PdfService {
     );
   }
 
+  // Editoryal "kicker" başlık bloğu: küçük bölüm etiketi + büyük sayfa
+  // başlığı + tek ince ayraç çizgisi. Renkli kutu/çerçeve yok.
   static pw.Widget _header({
+    required String kicker,
     required String title,
     required String? date,
-    required PdfColor sectionColor,
-    required pw.Font boldItalic,
-    required pw.Font italic,
+    required pw.Font kickerFont,
+    required pw.Font titleFont,
+    required pw.Font dateFont,
     required PdfColor ink,
     required PdfColor gold,
+    required PdfColor soft,
+    required PdfColor line,
   }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Container(width: 26, height: 2.5, color: sectionColor),
-        pw.SizedBox(height: 7),
+        pw.Text(kicker.toUpperCase(),
+            style: pw.TextStyle(
+                font: kickerFont, fontSize: 9.5,
+                letterSpacing: 3, color: soft)),
+        pw.SizedBox(height: 8),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.end,
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -356,16 +428,18 @@ class PdfService {
             pw.Expanded(
               child: pw.Text(title,
                   style: pw.TextStyle(
-                      font: boldItalic, fontSize: 24, color: ink)),
+                      font: titleFont, fontSize: 27, color: ink)),
             ),
-            if (date != null && date.isNotEmpty)
+            if (date != null && date.isNotEmpty) ...[
+              pw.SizedBox(width: 10),
               pw.Text(date,
                   style: pw.TextStyle(
-                      font: italic, fontSize: 11, color: gold)),
+                      font: dateFont, fontSize: 12.5, color: gold)),
+            ],
           ],
         ),
-        pw.SizedBox(height: 5),
-        pw.Container(height: 0.6, color: gold),
+        pw.SizedBox(height: 11),
+        pw.Container(height: 0.6, color: line),
       ],
     );
   }
@@ -376,6 +450,7 @@ class PdfService {
     pw.Font valueFont,
     PdfColor ink,
     PdfColor soft,
+    PdfColor line,
   ) {
     final rows = <pw.Widget>[];
     for (int i = 0; i < fields.length; i += 2) {
@@ -383,22 +458,20 @@ class PdfService {
       for (int j = i; j < i + 2 && j < fields.length; j++) {
         rowWidgets.add(pw.Expanded(
           child: pw.Padding(
-            padding: const pw.EdgeInsets.only(right: 10, bottom: 10),
+            padding: const pw.EdgeInsets.only(right: 14, bottom: 12),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(fields[j].label.toUpperCase(),
                     style: pw.TextStyle(
                         font: labelFont, fontSize: 7.5,
-                        letterSpacing: 0.7, color: soft)),
-                pw.SizedBox(height: 2),
+                        letterSpacing: 1.2, color: soft)),
+                pw.SizedBox(height: 3),
                 pw.Text(fields[j].value,
                     style: pw.TextStyle(
-                        font: valueFont, fontSize: 15, color: ink)),
-                pw.SizedBox(height: 3),
-                pw.Container(
-                    height: 0.4,
-                    color: PdfColor(0.8, 0.8, 0.8)),
+                        font: valueFont, fontSize: 15.5, color: ink)),
+                pw.SizedBox(height: 4),
+                pw.Container(height: 0.5, color: line),
               ],
             ),
           ),
@@ -412,135 +485,206 @@ class PdfService {
     return pw.Column(children: rows);
   }
 
+  // Sade bir "pull-quote" bloğu: renkli dolgu yok, sadece ince sol çizgi
+  // ve rahat bir sağ boşluk — dergi alıntısı hissi.
   static pw.Widget _letter({
     required String text,
     required String? from,
-    required pw.Font italic,
+    required pw.Font bodyFont,
+    required pw.Font accentFont,
+    required pw.Font labelFont,
     required PdfColor ink,
     required PdfColor soft,
     required PdfColor gold,
-    required PdfColor accent,
+    required PdfColor line,
   }) {
     return pw.Container(
-      padding: const pw.EdgeInsets.fromLTRB(16, 12, 16, 12),
+      padding: const pw.EdgeInsets.only(left: 20),
       decoration: pw.BoxDecoration(
-        border: pw.Border(
-            left: pw.BorderSide(color: gold, width: 2)),
-        color: PdfColor(
-          (accent.red + 1.0) / 2,
-          (accent.green + 1.0) / 2,
-          (accent.blue + 1.0) / 2,
-        ),
+        border: pw.Border(left: pw.BorderSide(color: line, width: 1)),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text('Sevgili bebeğim,',
               style: pw.TextStyle(
-                  font: italic, fontSize: 13, color: soft)),
-          pw.SizedBox(height: 6),
+                  font: accentFont, fontSize: 13, color: soft)),
+          pw.SizedBox(height: 8),
           pw.Text(text,
               style: pw.TextStyle(
-                  font: italic, fontSize: 15,
-                  color: ink, lineSpacing: 4)),
+                  font: bodyFont, fontSize: 15,
+                  color: ink, lineSpacing: 6)),
           if (from != null && from.isNotEmpty) ...[
-            pw.SizedBox(height: 8),
-            pw.Align(
-              alignment: pw.Alignment.centerRight,
-              child: pw.Text(from,
-                  style: pw.TextStyle(
-                      font: italic, fontSize: 13, color: gold)),
-            ),
+            pw.SizedBox(height: 12),
+            pw.Text(from.toUpperCase(),
+                style: pw.TextStyle(
+                    font: labelFont, fontSize: 9.5,
+                    letterSpacing: 2, color: gold)),
           ],
         ],
       ),
     );
   }
 
+  // Bir fotoğrafı, gerçek en boy oranıyla tam eşleşen bir kutuda,
+  // ince bir gölgeyle yerleştirir. Kutu = fotoğrafın görünür alanı
+  // olduğundan (justified boyutlandırma sayesinde) kırpma da,
+  // gölgenin görüntüden kopması da olmaz.
+  static pw.Widget _frame({
+    required pw.MemoryImage image,
+    required String? caption,
+    required double width,
+    required double height,
+    required PdfColor bg,
+    required PdfColor captionColor,
+    required pw.Font captionFont,
+  }) {
+    return pw.Column(
+      children: [
+        pw.Container(
+          width: width,
+          height: height,
+          decoration: pw.BoxDecoration(
+            color: bg,
+            boxShadow: [
+              pw.BoxShadow(
+                color: const PdfColor(0, 0, 0, 0.16),
+                offset: const PdfPoint(0, 3),
+                blurRadius: 9,
+              ),
+            ],
+          ),
+          child: pw.Image(image, fit: pw.BoxFit.contain),
+        ),
+        if (caption != null && caption.isNotEmpty) ...[
+          pw.SizedBox(height: 8),
+          pw.SizedBox(
+            width: width,
+            child: pw.Text(caption,
+                textAlign: pw.TextAlign.center,
+                style: pw.TextStyle(
+                    font: captionFont, fontSize: 10.5,
+                    letterSpacing: 0.2, color: captionColor)),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // Bir satırdaki 1-2 fotoğrafı, gerçek en boy oranlarını koruyarak ortak
+  // bir yükseklikte ("justified") yan yana dizer. Fotoğraflar sayfa
+  // genişliğine sığmıyorsa yükseklik daralır — asla kırpma yapılmaz.
+  static pw.Widget _justifiedRow({
+    required List<String> paths,
+    required List<String?> captions,
+    required double maxHeight,
+    required double availableWidth,
+    required PdfColor bg,
+    required PdfColor captionColor,
+    required pw.Font captionFont,
+    double spacing = 16,
+  }) {
+    final images =
+        paths.map((p) => pw.MemoryImage(File(p).readAsBytesSync())).toList();
+    final aspects =
+        images.map((img) => (img.width ?? 1) / (img.height ?? 1)).toList();
+    final sumAspect = aspects.reduce((a, b) => a + b);
+    final spacingTotal = (images.length - 1) * spacing;
+    final justifiedHeight = (availableWidth - spacingTotal) / sumAspect;
+    final rowHeight =
+        justifiedHeight < maxHeight ? justifiedHeight : maxHeight;
+
+    final children = <pw.Widget>[];
+    for (int i = 0; i < images.length; i++) {
+      if (i > 0) children.add(pw.SizedBox(width: spacing));
+      children.add(_frame(
+        image: images[i],
+        caption: captions[i],
+        width: aspects[i] * rowHeight,
+        height: rowHeight,
+        bg: bg,
+        captionColor: captionColor,
+        captionFont: captionFont,
+      ));
+    }
+    return pw.Row(
+      mainAxisAlignment: pw.MainAxisAlignment.center,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
   static pw.Widget _photos({
     required List<String> photos,
     required List<String>? labels,
-    required PdfColor accent,
+    required pw.Font captionFont,
+    required PdfColor captionColor,
     required PdfColor bg,
-    required pw.Font labelFont,
-    required PdfColor soft,
+    required double availableWidth,
     required bool tall,
   }) {
     if (photos.isEmpty) return pw.Container();
-    // Yüksekliği fotoğrafın boyutuna göre ayarla (kırpma yok)
+    String? labelOf(int i) =>
+        (labels != null && i < labels.length) ? labels[i] : null;
+
+    // Tek fotoğraf: öne çıkan bir "hero" görsel.
+    // İki fotoğraf: yan yana bir "diptik" — kare/ızgara hissi vermez.
+    if (photos.length <= 2) {
+      final cap = photos.length == 1
+          ? (tall ? 380.0 : 235.0)
+          : (tall ? 300.0 : 205.0);
+      return _justifiedRow(
+        paths: photos,
+        captions: List.generate(photos.length, labelOf),
+        maxHeight: cap,
+        availableWidth: availableWidth,
+        bg: bg,
+        captionColor: captionColor,
+        captionFont: captionFont,
+      );
+    }
+
+    // Üç veya dört fotoğraf: sakin, ikişerli satırlar — her satır kendi
+    // içinde ortak yükseklikte hizalanır.
+    final cap = tall ? 230.0 : 168.0;
     final rows = <pw.Widget>[];
     for (int i = 0; i < photos.length; i += 2) {
-      final rowW = <pw.Widget>[];
-      for (int j = i; j < i + 2 && j < photos.length; j++) {
-        final label = (labels != null && j < labels.length)
-            ? labels[j]
-            : null;
-        rowW.add(pw.Expanded(
-          child: pw.Padding(
-            padding: pw.EdgeInsets.only(
-              right: j % 2 == 0 ? 5 : 0,
-              left: j % 2 == 1 ? 5 : 0,
-              bottom: 10,
-            ),
-            child: pw.Column(
-              children: [
-                // Polaroid çerçevesi — BoxFit.contain kullan, kırpma yok
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: bg,
-                    border: pw.Border.all(color: accent, width: 0.8),
-                    boxShadow: [
-                      pw.BoxShadow(
-                        color: PdfColor(0, 0, 0, 0.1),
-                        offset: const PdfPoint(2, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  padding: const pw.EdgeInsets.fromLTRB(6, 6, 6, 10),
-                  child: pw.Image(
-                    pw.MemoryImage(
-                        File(photos[j]).readAsBytesSync()),
-                    // contain: kırpmadan sığdır
-                    fit: pw.BoxFit.contain,
-                    height: tall ? 260 : 170,
-                  ),
-                ),
-                if (label != null && label.isNotEmpty) ...[
-                  pw.SizedBox(height: 4),
-                  pw.Text(label,
-                      style: pw.TextStyle(
-                          font: labelFont,
-                          fontSize: 11,
-                          color: soft),
-                      textAlign: pw.TextAlign.center),
-                ],
-              ],
-            ),
-          ),
-        ));
-      }
-      if (rowW.length == 1 && photos.length > 1) {
-        rowW.add(pw.Expanded(child: pw.Container()));
-      }
-      rows.add(pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: rowW));
+      final end = (i + 2 > photos.length) ? photos.length : i + 2;
+      final rowPaths = photos.sublist(i, end);
+      final rowCaptions = List.generate(rowPaths.length, (k) => labelOf(i + k));
+      if (i > 0) rows.add(pw.SizedBox(height: 18));
+      rows.add(_justifiedRow(
+        paths: rowPaths,
+        captions: rowCaptions,
+        maxHeight: cap,
+        availableWidth: availableWidth,
+        bg: bg,
+        captionColor: captionColor,
+        captionFont: captionFont,
+      ));
     }
     return pw.Column(children: rows);
   }
 
-  static pw.Widget _footer(
-      pw.Font jost, PdfColor gold, PdfColor sectionColor) {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+  static pw.Widget _footer({
+    required pw.Font font,
+    required PdfColor line,
+    required PdfColor soft,
+    required int pageNo,
+    required int totalPages,
+  }) {
+    return pw.Column(
       children: [
-        pw.Container(width: 22, height: 2, color: sectionColor),
-        pw.Text('T I L S I M',
-            style: pw.TextStyle(
-                font: jost, fontSize: 7,
-                letterSpacing: 4, color: gold)),
-        pw.Container(width: 22, height: 2, color: sectionColor),
+        pw.Container(height: 0.5, color: line),
+        pw.SizedBox(height: 10),
+        pw.Center(
+          child: pw.Text(
+              '${pageNo.toString().padLeft(2, '0')}  ·  '
+              '${totalPages.toString().padLeft(2, '0')}',
+              style: pw.TextStyle(
+                  font: font, fontSize: 8,
+                  letterSpacing: 1.5, color: soft)),
+        ),
       ],
     );
   }
@@ -828,14 +972,22 @@ class PdfService {
                 : 'Aile Üyesi',
             m['name']?.toString() ?? ''))
         .toList();
-    final photos = members
-        .where((m) =>
-            m['photo'] != null &&
-            File(m['photo'].toString()).existsSync())
-        .map((m) => m['photo'].toString())
+    final photoMembers = members.where((m) =>
+        m['photo'] != null && File(m['photo'].toString()).existsSync());
+    final photos = photoMembers.map((m) => m['photo'].toString()).toList();
+    final photoLabels = photoMembers
+        .map((m) => m['name']?.toString().trim().isNotEmpty == true
+            ? m['name'].toString().trim()
+            : (m['rel']?.toString().trim().isNotEmpty == true
+                ? m['rel'].toString().trim()
+                : 'Aile Üyesi'))
         .toList();
     if (fields.isEmpty) return;
-    pages.add(_PdfPage(title: title, fields: fields, photos: photos));
+    pages.add(_PdfPage(
+        title: title,
+        fields: fields,
+        photos: photos,
+        photoLabels: photoLabels));
   }
 
   static void _addReactionsPage(

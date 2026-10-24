@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:printing/printing.dart';
 import '../../core/constants/sections.dart';
+import '../../core/theme/app_theme.dart';
 import '../../data/providers/app_provider.dart';
 import '../../data/services/pdf_service.dart';
 import '../../widgets/theme_sheet.dart';
@@ -14,8 +15,32 @@ import 'widgets/ani_tree.dart';
 import 'widgets/milestone_badges.dart';
 import 'widgets/section_card.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _maybeShowWelcome());
+  }
+
+  void _maybeShowWelcome() {
+    if (!mounted) return;
+    final prov = context.read<AppProvider>();
+    if (prov.welcomeShown) return;
+    prov.markWelcomeShown();
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => _WelcomeDialog(t: prov.theme),
+    );
+  }
 
   Future<void> _backup(BuildContext context) async {
     final prov = context.read<AppProvider>();
@@ -83,6 +108,8 @@ class HomeScreen extends StatelessWidget {
       inkColor: t.ink,
       goldColor: t.gold,
       accentColor: t.accent,
+      panelColor: t.panel,
+      lineColor: t.line,
     );
 
     if (!context.mounted) return;
@@ -269,7 +296,18 @@ class HomeScreen extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _generatePdf(context),
                     icon: const Icon(Icons.picture_as_pdf, size: 16),
-                    label: const Text('PDF Albüm'),
+                    label: Text.rich(
+                      TextSpan(
+                        text: 'PDF Albüm',
+                        children: [
+                          TextSpan(
+                            text: '  (beta)',
+                            style: TextStyle(
+                                fontSize: 10, color: t.soft),
+                          ),
+                        ],
+                      ),
+                    ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: t.ink,
                       padding:
@@ -319,6 +357,156 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _WelcomeDialog extends StatelessWidget {
+  final AppTheme t;
+  const _WelcomeDialog({required this.t});
+
+  Widget _contactRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: t.accent.withOpacity(0.16),
+            ),
+            child: Icon(icon, size: 16, color: t.goldDeep),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    letterSpacing: 0.6,
+                    color: t.soft,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                SelectableText(
+                  value,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: t.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 26),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(26, 30, 26, 22),
+        decoration: BoxDecoration(
+          color: t.panel,
+          borderRadius: BorderRadius.circular(26),
+          border: Border.all(color: t.gold.withOpacity(0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.18),
+              blurRadius: 30,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 34, height: 0.8, color: t.gold),
+            const SizedBox(height: 18),
+            Text(
+              'Hoş Geldiniz',
+              style: GoogleFonts.cormorantGaramond(
+                fontSize: 26,
+                fontWeight: FontWeight.w600,
+                color: t.ink,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Bu ürün bir demo ürünüdür ve sizlerin geri '
+              'dönüşleriyle daha da iyi hale getirilecektir. '
+              'Deneyiminizi bizimle paylaşmanız bizim için çok değerli.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.55,
+                color: t.soft,
+              ),
+            ),
+            const SizedBox(height: 22),
+            Container(height: 0.6, color: t.line),
+            const SizedBox(height: 18),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'BİZE ULAŞIN',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  letterSpacing: 2.2,
+                  color: t.goldDeep,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            _contactRow(
+              icon: Icons.camera_alt_outlined,
+              label: 'INSTAGRAM',
+              value: 'tilsimstore.tr',
+            ),
+            _contactRow(
+              icon: Icons.chat_bubble_outline,
+              label: 'WHATSAPP',
+              value: '0554 720 9689',
+            ),
+            _contactRow(
+              icon: Icons.public,
+              label: 'WEB SİTE',
+              value: 'tilsim.store',
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: t.goldDeep,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: const Text('Anladım, Başlayalım'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -77,6 +77,23 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
         : '';
     final babaPhoto = babaEntry['avatar'] as String?;
 
+    // "Ailemizin Diğer Üyeleri" listesinden büyükanne/büyükbabaları bul,
+    // soyağacına otomatik doldurmak için.
+    final uyelerEntry = prov.getEntry('uyeler');
+    final members = (uyelerEntry['members'] as List?) ?? [];
+    Map<String, dynamic>? memberByRel(String rel) {
+      for (final m in members) {
+        final r = (m as Map)['rel']?.toString().trim().toLowerCase() ?? '';
+        if (r == rel.toLowerCase()) return Map<String, dynamic>.from(m);
+      }
+      return null;
+    }
+
+    final anneanneMember = memberByRel('Anneanne');
+    final babaanneMember = memberByRel('Babaanne');
+    final dedeAnneMember = memberByRel('Dede (Anne)');
+    final dedeBabaMember = memberByRel('Dede (Baba)');
+
     Widget pageWidget;
     switch (page.kind) {
       case 'info':
@@ -107,6 +124,14 @@ class _PageEditorScreenState extends State<PageEditorScreen> {
           annePhoto: annePhoto,
           babaName: babaName,
           babaPhoto: babaPhoto,
+          anneanneName: anneanneMember?['name']?.toString() ?? '',
+          anneannePhoto: anneanneMember?['photo'] as String?,
+          dedeAnneName: dedeAnneMember?['name']?.toString() ?? '',
+          dedeAnnePhoto: dedeAnneMember?['photo'] as String?,
+          babaanneName: babaanneMember?['name']?.toString() ?? '',
+          babaannePhoto: babaanneMember?['photo'] as String?,
+          dedeBabaName: dedeBabaMember?['name']?.toString() ?? '',
+          dedeBabaPhoto: dedeBabaMember?['photo'] as String?,
           entry: _local,
           onChanged: _onChanged,
         );

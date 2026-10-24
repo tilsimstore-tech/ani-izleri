@@ -1,6 +1,6 @@
 {
-    "name": "ani_izleri",
-    "short_name": "ani_izleri",
+    "name": "Bebeğimin Anı İzleri",
+    "short_name": "Anı İzleri",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

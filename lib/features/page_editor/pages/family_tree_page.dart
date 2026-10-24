@@ -6,12 +6,18 @@ import '../../../widgets/round_photo.dart';
 
 const _kTreeNodes = [
   {'key': 'anneanne', 'role': 'Anneanne'},
-  {'key': 'dedeanne', 'role': 'Dede'},
+  {'key': 'dedeanne', 'role': 'Dede (Anne)'},
   {'key': 'babaanne', 'role': 'Babaanne'},
-  {'key': 'babababa', 'role': 'Dede'},
+  {'key': 'babababa', 'role': 'Dede (Baba)'},
   {'key': 'anne', 'role': 'Anne'},
   {'key': 'baba', 'role': 'Baba'},
 ];
+
+// Otomatik doldurulan düğümler: anne/baba kendi bilgi sayfalarından,
+// büyükanne/büyükbabalar "Ailemizin Diğer Üyeleri" listesinden gelir.
+const _kAutoKeys = {
+  'anne', 'baba', 'anneanne', 'dedeanne', 'babaanne', 'babababa',
+};
 
 class FamilyTreePage extends StatefulWidget {
   final AppTheme t;
@@ -20,6 +26,14 @@ class FamilyTreePage extends StatefulWidget {
   final String? annePhoto;
   final String babaName;
   final String? babaPhoto;
+  final String anneanneName;
+  final String? anneannePhoto;
+  final String dedeAnneName;
+  final String? dedeAnnePhoto;
+  final String babaanneName;
+  final String? babaannePhoto;
+  final String dedeBabaName;
+  final String? dedeBabaPhoto;
   final Map<String, dynamic> entry;
   final ValueChanged<Map<String, dynamic>> onChanged;
 
@@ -31,6 +45,14 @@ class FamilyTreePage extends StatefulWidget {
     this.annePhoto,
     required this.babaName,
     this.babaPhoto,
+    required this.anneanneName,
+    this.anneannePhoto,
+    required this.dedeAnneName,
+    this.dedeAnnePhoto,
+    required this.babaanneName,
+    this.babaannePhoto,
+    required this.dedeBabaName,
+    this.dedeBabaPhoto,
     required this.entry,
     required this.onChanged,
   });
@@ -49,21 +71,50 @@ class _FamilyTreePageState extends State<FamilyTreePage> {
     _tree = Map<String, dynamic>.from((widget.entry['tree'] as Map?) ?? {});
   }
 
-  // Bir düğümün gerçek adını döndür (anne/baba için otomatik + override desteği)
+  // Otomatik kaynaktan gelen ismi döndürür (anne/baba/büyükanne/büyükbaba).
+  String? _autoName(String key) {
+    switch (key) {
+      case 'anne': return widget.anneName;
+      case 'baba': return widget.babaName;
+      case 'anneanne': return widget.anneanneName;
+      case 'dedeanne': return widget.dedeAnneName;
+      case 'babaanne': return widget.babaanneName;
+      case 'babababa': return widget.dedeBabaName;
+      default: return null;
+    }
+  }
+
+  // Otomatik kaynaktan gelen fotoğrafı döndürür.
+  String? _autoPhoto(String key) {
+    switch (key) {
+      case 'anne': return widget.annePhoto;
+      case 'baba': return widget.babaPhoto;
+      case 'anneanne': return widget.anneannePhoto;
+      case 'dedeanne': return widget.dedeAnnePhoto;
+      case 'babaanne': return widget.babaannePhoto;
+      case 'babababa': return widget.dedeBabaPhoto;
+      default: return null;
+    }
+  }
+
+  bool _isOverridden(String key) =>
+      (_tree[key] as Map?)?['nameOverride'] != null ||
+      (_tree[key] as Map?)?['photoOverride'] != null;
+
+  // Bir düğümün gerçek adını döndür (otomatik kaynak + override desteği)
   String _getName(String key) {
     final override = (_tree[key] as Map?)?['nameOverride']?.toString();
     if (override != null && override.isNotEmpty) return override;
-    if (key == 'anne') return widget.anneName;
-    if (key == 'baba') return widget.babaName;
+    final auto = _autoName(key);
+    if (auto != null) return auto;
     return (_tree[key] as Map?)?['name']?.toString() ?? '';
   }
 
-  // Bir düğümün fotoğrafını döndür (anne/baba için otomatik + override desteği)
+  // Bir düğümün fotoğrafını döndür (otomatik kaynak + override desteği)
   String? _getPhoto(String key) {
     final override = (_tree[key] as Map?)?['photoOverride'] as String?;
     if (override != null) return override;
-    if (key == 'anne') return widget.annePhoto;
-    if (key == 'baba') return widget.babaPhoto;
+    if (_kAutoKeys.contains(key)) return _autoPhoto(key);
     return (_tree[key] as Map?)?['photo'] as String?;
   }
 
@@ -157,11 +208,9 @@ class _FamilyTreePageState extends State<FamilyTreePage> {
             )['role'] ??
             '');
 
-    // anne/baba için override var mı?
-    final isAnneOverride = (_tree['anne'] as Map?)?['nameOverride'] != null ||
-        (_tree['anne'] as Map?)?['photoOverride'] != null;
-    final isBabaOverride = (_tree['baba'] as Map?)?['nameOverride'] != null ||
-        (_tree['baba'] as Map?)?['photoOverride'] != null;
+    // Otomatik doldurulan bir düğüm elle değiştirilmiş mi?
+    final isAutoOverride =
+        editKey != null && _kAutoKeys.contains(editKey) && _isOverridden(editKey);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -247,7 +296,7 @@ class _FamilyTreePageState extends State<FamilyTreePage> {
                           ? ((_tree['cocuk'] as Map?)?['photo'] as String?)
                           : _getPhoto(editKey!),
                       onSet: (p) {
-                        if (editKey == 'anne' || editKey == 'baba') {
+                        if (_kAutoKeys.contains(editKey)) {
                           _update(editKey, {'photoOverride': p});
                         } else {
                           _update(editKey, {'photo': p});
@@ -273,13 +322,13 @@ class _FamilyTreePageState extends State<FamilyTreePage> {
                             )
                           : TextFormField(
                               key: ValueKey('name_$editKey'),
-                              initialValue: (editKey == 'anne' || editKey == 'baba')
+                              initialValue: _kAutoKeys.contains(editKey)
                                   ? ((_tree[editKey] as Map?)?['nameOverride']
                                           ?.toString() ??
                                       _getName(editKey))
                                   : _getName(editKey),
                               onChanged: (v) {
-                                if (editKey == 'anne' || editKey == 'baba') {
+                                if (_kAutoKeys.contains(editKey)) {
                                   _update(editKey, {'nameOverride': v});
                                 } else {
                                   _update(editKey, {'name': v});
@@ -305,9 +354,8 @@ class _FamilyTreePageState extends State<FamilyTreePage> {
                     ),
                   ],
                 ),
-                // Anne/Baba için "Orijinal bilgiyi kullan" butonu
-                if ((editKey == 'anne' && isAnneOverride) ||
-                    (editKey == 'baba' && isBabaOverride)) ...[
+                // Otomatik doldurulan düğümler için "Orijinal bilgiyi kullan" butonu
+                if (isAutoOverride) ...[
                   const SizedBox(height: 10),
                   TextButton.icon(
                     onPressed: () {

@@ -1,0 +1,46 @@
+workflows:
+  ios-release:
+    name: iOS Release (App Store)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: 3.44.0
+      xcode: latest
+      cocoapods: default
+      groups:
+        # Codemagic > Teams > Global variables altında oluşturulur:
+        # APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_IDENTIFIER,
+        # APP_STORE_CONNECT_PRIVATE_KEY (.p8 içeriği), CERTIFICATE_PRIVATE_KEY
+        - appstore_credentials
+      vars:
+        BUNDLE_ID: store.tilsim.aniIzleri
+    scripts:
+      - name: Keychain hazırla
+        script: keychain initialize
+      - name: İmzalama dosyalarını al / oluştur
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+      - name: Sertifikaları keychain'e ekle
+        script: keychain add-certificates
+      - name: Xcode projesine profilleri uygula
+        script: xcode-project use-profiles
+      - name: Flutter paketleri
+        script: flutter pub get
+      - name: CocoaPods
+        script: cd ios && pod install --repo-update
+      - name: IPA derle
+        script: |
+          flutter build ipa --release \
+            --build-number=$((PROJECT_BUILD_NUMBER + 6)) \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true

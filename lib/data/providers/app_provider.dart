@@ -22,6 +22,16 @@ class AppProvider extends ChangeNotifier {
     _themeKey = _settingsBox.get('theme', defaultValue: 'mavi')!;
   }
 
+  // ============================================================
+  // KARŞILAMA POP-UP'I (bir kez gösterilir)
+  // ============================================================
+  bool get welcomeShown =>
+      _settingsBox.get('welcomeShown', defaultValue: '0') == '1';
+
+  void markWelcomeShown() {
+    _settingsBox.put('welcomeShown', '1');
+  }
+
   Map<String, dynamic> getEntry(String pageId) {
     final e = _box.get(pageId);
     if (e == null) return {};
