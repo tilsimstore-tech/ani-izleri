@@ -13,19 +13,19 @@ Bu dosya uygulamanın Android ve iOS yayın sürecini ve güncel durumunu tutar.
 
 | | Android | iOS |
 |---|---|---|
-| Mağazada yayında olan | 1.0.0 (6) | — (henüz yayında değil) |
-| Son yüklenen derleme | 1.0.0 (6) | 1.0.0 (7) — TestFlight |
-| Durum | Yayında | TestFlight'ta test ediliyor, mağaza sayfası hazırlanacak |
+| Mağazada yayında olan | 1.0.0 (6) — ₺249,99 | — (henüz yayında değil) |
+| Son yüklenen derleme | 1.0.0 (6) | 1.0.0 (7) |
+| Durum | Yayında | **24.10.2026'da App Review'a gönderildi** (Waiting for Review), onaylanınca otomatik yayın |
 
-**Sıradaki işler (iOS ilk yayın):**
-- [ ] TestFlight'ta kamera, galeri, ses kaydı, PDF, paylaşma, yedekleme testleri
-- [ ] Mağaza metinleri (ad, alt başlık, açıklama, anahtar kelimeler)
-- [ ] 6.9" iPhone ekran görüntüleri (1320×2868, en az 3 adet)
-- [ ] Gizlilik politikası URL'si
-- [ ] App Privacy: "Veri toplanmıyor"
-- [ ] Kategori: Yaşam Tarzı veya Fotoğraf ve Video (Kids kategorisi DEĞİL)
-- [ ] AB trader status kararı
-- [ ] İncelemeye gönder
+**iOS hesap/iş durumu (24.10.2026):**
+- Fiyat ₺499,99, 175 ülke; kategori Yaşam Tarzı / Fotoğraf ve Video; yaş 4+; "Veri toplanmıyor"
+- Paid Apps sözleşmesi kabul edildi; banka (Ziraat, TRY) işleniyor → sonra sözleşme Active olur
+- W-8BEN aktif (Article 7 §1, %0, income from the sale of applications)
+- AB tüccar (DSA) beyanı incelemede — adres: Akgedik Mah. Akgedik Cad. No:544 İç Kapı No:8, Yunusemre/Manisa
+- Small Business Program başvurusu yapıldı (%15 komisyon)
+- Not: hesaptaki yasal kimlik adresi "no4" olarak kayıtlı; gerekirse Apple Developer Support'tan düzeltilmeli
+- Ekran görüntüleri: 1206×2622 (6.3" iPhone), kaynak `Masaüstü\Yeni klasör\Dağıtım\appstore_ekran`
+- Promo kodu: uygulama yayına girince App Store Connect → Promo Codes (tek kullanımlık, 4 hafta geçerli, satılamaz)
 
 ---
 
@@ -87,6 +87,9 @@ Bu dosya uygulamanın Android ve iOS yayın sürecini ve güncel durumunu tutar.
 ## Sürüm Geçmişi
 
 En yeni en üstte. Her sürümde: tarih, platform, sürüm, ne değişti.
+
+### 2026-10-24 — iOS 1.0.0 (7) — App Review'a gönderildi
+- Mağaza sayfası dolduruldu (metinler `MAGAZA_METINLERI.md`), 6 ekran görüntüsü, ₺499,99, 175 ülke.
 
 ### 2026-10-24 — iOS 1.0.0 (7) — TestFlight
 - İlk iOS derlemesi Codemagic ile oluşturuldu, TestFlight'a yüklendi ve iPhone'da çalıştı.
